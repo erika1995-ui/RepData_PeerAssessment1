@@ -7,19 +7,107 @@ output:
 
 
 ## Loading and preprocessing the data
-
-
-
+Download the data 
+library(ggplot2)
+library(dplyr)
+#question1
+```{r} 
+if(!file.exists("./dati")){dir.create("./dati")}
+fileUrl <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+download.file(fileUrl,destfile="./dati/activity.zip",method="curl")
+unzip(zipfile="./dati/activity.zip",exdir="./dati")
+activity_data <- read.csv("./dati/activity.csv")
+activity_data$date <- as.Date(activity_data$date)
+```
 ## What is mean total number of steps taken per day?
-
-
-
+#question2
+```{r}
+steps_days <- activity_data %>%
+  group_by(date) %>%
+  summarize(sumsteps = sum(steps, na.rm = TRUE))
+head(steps_days,5)
+hist(steps_days$sumsteps, xlab="Number of steps", main="Histogram")
+mean <- round(mean(steps_days$sumsteps),digits = 2)
+median <- round(median(steps_days$sumsteps),digits = 2)
+print(paste("Mean:",mean))
+print(paste("Median:",median))
+```
 ## What is the average daily activity pattern?
-
-
-
+#question3
+```{r}
+steps_interval <- activity %>%
+  group_by(interval) %>%
+  summarize(meansteps = mean(steps, na.rm = TRUE)) 
+head(steps_interval,5)
+plot(steps_interval$meansteps ~ steps_interval$interval, type="l", xlab = "5 Minute Intervals", ylab = "steps average")
+print(paste("5-minute intrerval with maximum number of steps: ",steps_interval$interval[which.max(steps_interval$meansteps)]))
+```
 ## Imputing missing values
+#question4
+```{r}
+print(paste("Number of rows with NA: ",sum(is.na(activity$steps))))
+
+activity_fill <- activity  
+for (i in 1:nrow(activity)){
+  if(is.na(activity$steps[i])){
+    activity_fill$steps[i]<- steps_interval$meansteps[activity_fill$interval[i] == steps_interval$interval]
+  }
+}
+```
+steps_days <- activity_fill %>%
+  group_by(date) %>%
+  summarize(sumsteps = sum(steps, na.rm = TRUE)) 
+hist(steps_days$sumsteps, xlab="number of steps")
+mean_fill <- round(mean(steps_days$sumsteps), digits = 2)
+median_fill <- round(median(steps_days$sumsteps), digits = 2)
+print(paste("The mean is: ", mean(mean_fill)))
+print(paste("The median is: ", mean(median_fill)))
+
+##Are there differences in activity patterns between weekdays and weekends?
+#question5
+```{r}
+DoW <- activity_fill
+DoW$date <- as.Date(DoW$date)
+DoW$day <- ifelse(weekdays(DoW$date) %in% c("Saturday", "Sunday"), "weekend", "weekday")
+DoW$day <- as.factor(DoW$day)
+
+WDay <- filter(DoW, DoW$day == "weekday")
+Weekend <- filter(DoW, DoW$day == "weekend")
+
+WDay <- WDay %>%
+  group_by(interval) %>%
+  summarize(steps = mean(steps)) 
+
+WDay$day <- "weekday"
+
+Weekend <- Weekend %>%
+  group_by(interval) %>%
+  summarize(steps = mean(steps)) 
+Weekend$day <- "weekend"
+
+wkdayWkend <- rbind(WDay, Weekend)
+wkdayWkend$day <- as.factor(wkdayWkend$day)
+
+r <- ggplot (wkdayWkend, aes (interval, steps))
+r + geom_line() + facet_grid (day~.) + 
+  theme(axis.text = element_text(size = 12),axis.title = element_text(size = 14)) + 
+  labs(y = "steps") + labs(x = "Interval") + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
 
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
